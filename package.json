@@ -1,7 +1,7 @@
 {
   "name": "balle-balle-server",
   "version": "2.0.0",
-  "description": "Backend for Balle Balle - serves a curated Hindi song list (with real YouTube video IDs) and the frontend.",
+  "description": "Backend for Anant Music Streaming - serves a curated Hindi song list (with real YouTube video IDs) and the frontend.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

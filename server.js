@@ -75,6 +75,6 @@ app.use(express.static(path.join(__dirname, "..", "client")));
 
 app.listen(PORT, () => {
   const provider = hasUsableYoutubeKey() ? YOUTUBE_SEARCH_API : ITUNES_SEARCH_API;
-  console.log(`\n  Balle Balle is running: http://localhost:${PORT}`);
+  console.log(`\n  Anant Music Streaming is running: http://localhost:${PORT}`);
   console.log(`  Search provider: ${provider}\n`);
 });
