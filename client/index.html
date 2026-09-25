@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anant Music Streaming — a Hindi songs radio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Yatra+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">🎵</div>
+      <div>
+        <div class="brand-name">Anant Music Streaming</div>
+        <div class="brand-hindi">अनंत संगीत</div>
+      </div>
+    </div>
+    <div class="on-air"><span class="dot"></span> On air</div>
+  </header>
+
+  <main class="stage">
+    <div class="banner" id="banner">
+      <div class="scene-bg" id="scene"></div>
+      <div class="banner-overlay"></div>
+      <div class="banner-content">
+        <p class="kicker">Anant Music Streaming</p>
+        <h1>Let the music carry you somewhere new</h1>
+        <p class="tagline">Discover timeless Hindi melodies, cinematic moments, and songs for every journey, streaming through YouTube's official player.</p>
+      </div>
+    </div>
+
+    <section class="player-card">
+      <div class="np-row">
+        <div class="np-cover" id="npCover">🎶</div>
+        <div class="np-text">
+          <p class="np-title" id="npTitle">Loading the station…</p>
+          <p class="np-meta" id="npMeta">—</p>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="t-btn" id="prevBtn" title="Previous">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6V5Zm3.5 7 10-7v14l-10-7Z"/></svg>
+        </button>
+        <button class="t-play" id="playBtn" title="Play">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg>
+          <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z"/></svg>
+        </button>
+        <button class="t-btn" id="nextBtn" title="Next">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 5h-2v14h2V5Zm-3.5 7-10-7v14l10-7Z"/></svg>
+        </button>
+      </div>
+
+      <div class="seek-row">
+        <span class="time" id="curTime">0:00</span>
+        <input type="range" id="seek" class="range" min="0" max="100" value="0">
+        <span class="time" id="durTime">0:00</span>
+      </div>
+    </section>
+
+    <section class="list-section">
+      <div class="list-head">
+        <h2>All songs on this station</h2>
+        <div class="searchbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="searchInput" type="text" placeholder="Search this station's songs…" autocomplete="off" />
+        </div>
+      </div>
+      <div class="song-list" id="songList">
+        <div class="empty-state"><p>Loading songs…</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Anant Music Streaming™ is a streaming service of Harsh Choudhary<br> Let the music carry you somewhere new </p>
+  </footer>
+</div>
+
+<!-- hidden YouTube player -->
+<div id="ytplayer" style="position:fixed;left:-10000px;top:-10000px;width:320px;height:180px;overflow:hidden;pointer-events:none;"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="script.js"></script>
+</body>
+</html>
