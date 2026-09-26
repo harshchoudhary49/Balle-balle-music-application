@@ -1,8 +1,13 @@
 const express = require("express");
 const path = require("path");
+const mongoose = require("mongoose");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/balle_balle")
+  .then(() => console.log("Connected to MongoDB successfully"))
+  .catch(err => console.error("MongoDB connection error:", err));
 const YOUTUBE_SEARCH_API = "YouTube Data API v3";
 const ITUNES_SEARCH_API = "iTunes Search API";
 const PLACEHOLDER_KEYS = ["PASTE_YOUR_KEY_HERE", "YOUR_REAL_KEY", "your_youtube_data_api_v3_key"];

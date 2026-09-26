@@ -22,7 +22,10 @@
         <div class="brand-hindi">अनंत संगीत</div>
       </div>
     </div>
-    <div class="on-air"><span class="dot"></span> On air</div>
+    <div style="display:flex; align-items:center; gap: 14px;">
+      <button class="auth-btn" id="openAuthBtn">Login</button>
+      <div class="on-air"><span class="dot"></span> On air</div>
+    </div>
   </header>
 
   <main class="stage">
@@ -82,6 +85,36 @@
   <footer class="footer">
     <p>Anant Music Streaming™ is a streaming service of Harsh Choudhary<br> Let the music carry you somewhere new </p>
   </footer>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-content">
+    <button class="modal-close" id="closeAuthBtn">&times;</button>
+    <div class="modal-header">
+      <h2 id="authTitle">Welcome Back</h2>
+      <p id="authSubtitle">Login to access your playlists</p>
+    </div>
+    <form id="authForm" class="auth-form">
+      <div class="input-group" id="usernameGroup" style="display:none;">
+        <label>Username</label>
+        <input type="text" id="authUsername" placeholder="Choose a username" autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="Enter your email" required autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="Enter your password" required autocomplete="off" />
+      </div>
+      <button type="submit" class="submit-btn" id="authSubmitBtn">Login</button>
+    </form>
+    <p class="auth-switch">
+      <span id="authSwitchText">Don't have an account?</span> 
+      <button type="button" id="authSwitchBtn">Sign up</button>
+    </p>
+  </div>
 </div>
 
 <!-- hidden YouTube player -->
