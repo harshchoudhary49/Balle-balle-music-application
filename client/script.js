@@ -58,6 +58,17 @@
   let currentSearchId = null;
   let searchRequestId = 0;
   let playerInitializing = false;
+  
+  let toastTimer = null;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove("show");
+    }, 3000);
+  }
 
   function fmt(sec) {
     if (sec == null || !isFinite(sec) || sec < 0) return "0:00";
@@ -73,7 +84,7 @@
   function songRowHTML(song, index) {
     const isPlaying = song.external ? song.id === currentSearchId : index === currentIndex;
     return `
-      <button class="song-row ${isPlaying ? "playing" : ""}" data-id="${escapeHtml(song.id)}" data-index="${song.external ? "" : index}" data-external="${Boolean(song.external)}">
+      <div class="song-row ${isPlaying ? "playing" : ""}" data-id="${escapeHtml(song.id)}" data-index="${song.external ? "" : index}" data-external="${Boolean(song.external)}">
         <span class="s-idx">${isPlaying ? "▶" : index + 1}</span>
         <span>
           <p class="s-title">${escapeHtml(song.title)}</p>
@@ -81,7 +92,8 @@
         </span>
         <span class="s-year">${song.year}</span>
         <span class="s-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg></span>
-      </button>
+        <button class="s-add" title="Add to Playlist">+</button>
+      </div>
     `;
   }
 
@@ -287,13 +299,52 @@
     player.seekTo((Number(e.target.value) / 100) * dur, true);
   });
 
-  document.addEventListener("click", (e) => {
+  document.addEventListener("click", async (e) => {
+    // Add to playlist click
+    const addBtn = e.target.closest(".s-add");
+    if (addBtn) {
+      const row = addBtn.closest("[data-id]");
+      const song = displayedSongs.find(item => item.id === row.dataset.id) || currentViewPlaylist?.songs.find(item => item.id === row.dataset.id);
+      openPlaylistSelector(song);
+      return;
+    }
+    
+    // Remove from playlist click
+    const delBtn = e.target.closest(".s-delete");
+    if (delBtn) {
+      const row = delBtn.closest("[data-id]");
+      const songId = row.dataset.id;
+      if (currentViewPlaylist && confirm("Remove this song from playlist?")) {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`/api/playlists/${currentViewPlaylist._id}/songs/${songId}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            currentViewPlaylist.songs = currentViewPlaylist.songs.filter(s => s.id !== songId);
+            renderPlaylistEditor(currentViewPlaylist);
+            fetchPlaylists(); // update background state
+            showToast("Removed from playlist");
+          }
+        } catch(err) {
+          showToast("Failed to remove song");
+        }
+      }
+      return;
+    }
+
+    // Play song click
     const row = e.target.closest("[data-id]");
     if (row) {
-      const song = displayedSongs.find(item => item.id === row.dataset.id);
+      // Find in currently displayed list
+      const songListToSearch = currentViewPlaylist ? currentViewPlaylist.songs : displayedSongs;
+      const song = songListToSearch.find(item => item.id === row.dataset.id);
       if (!song) return;
-      if (song.external) {
-        playSearchSong(song);
+      if (song.external || currentViewPlaylist) {
+        // We handle playlist songs as external playing for now since we just play them ad-hoc
+        const playableSong = {...song, external: true}; 
+        playSearchSong(playableSong);
       } else {
         playIndex(songs.indexOf(song));
         if (playerReady) player.playVideo();
@@ -339,4 +390,429 @@
       document.getElementById("songList").innerHTML =
         `<div class="empty-state"><p>Couldn't load the song list. Make sure the server is running.</p></div>`;
     });
+
+  // --- Auth Modal Logic ---
+  const authModal = document.getElementById("authModal");
+  const openAuthBtn = document.getElementById("openAuthBtn");
+  const closeAuthBtn = document.getElementById("closeAuthBtn");
+  const authSwitchBtn = document.getElementById("authSwitchBtn");
+  
+  const authTitle = document.getElementById("authTitle");
+  const authSubtitle = document.getElementById("authSubtitle");
+  const usernameGroup = document.getElementById("usernameGroup");
+  const authSubmitBtn = document.getElementById("authSubmitBtn");
+  const authSwitchText = document.getElementById("authSwitchText");
+  const authForm = document.getElementById("authForm");
+
+  let isLogin = true;
+
+  function toggleAuthMode() {
+    isLogin = !isLogin;
+    if (isLogin) {
+      authTitle.textContent = "Welcome Back";
+      authSubtitle.textContent = "Login to access your playlists";
+      usernameGroup.style.display = "none";
+      document.getElementById("authUsername").removeAttribute("required");
+      authSubmitBtn.textContent = "Login";
+      authSwitchText.textContent = "Don't have an account?";
+      authSwitchBtn.textContent = "Sign up";
+    } else {
+      authTitle.textContent = "Create Account";
+      authSubtitle.textContent = "Sign up to save your favorite songs";
+      usernameGroup.style.display = "flex";
+      document.getElementById("authUsername").setAttribute("required", "true");
+      authSubmitBtn.textContent = "Sign Up";
+      authSwitchText.textContent = "Already have an account?";
+      authSwitchBtn.textContent = "Login";
+    }
+  }
+
+  openAuthBtn.addEventListener("click", () => {
+    authModal.classList.add("active");
+  });
+
+  closeAuthBtn.addEventListener("click", () => {
+    authModal.classList.remove("active");
+  });
+
+  authModal.addEventListener("click", (e) => {
+    if (e.target === authModal) {
+      authModal.classList.remove("active");
+    }
+  });
+
+  authSwitchBtn.addEventListener("click", toggleAuthMode);
+
+  authForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    
+    let url = "/api/auth/login";
+    let body = { email, password };
+    
+    if (!isLogin) {
+      const username = document.getElementById("authUsername").value.trim();
+      url = "/api/auth/signup";
+      body = { username, email, password };
+    }
+    
+    try {
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.textContent = "Please wait...";
+      
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        alert(data.error || "Authentication failed");
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = isLogin ? "Login" : "Sign Up";
+        return;
+      }
+      
+      // Success! Store token and fetch playlists
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      
+      authModal.classList.remove("active");
+      checkAuth();
+      
+    } catch (err) {
+      alert("Network error occurred");
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = isLogin ? "Login" : "Sign Up";
+    }
+  });
+
+  // --- Playlists Logic ---
+  let userPlaylists = [];
+  const playlistsSection = document.getElementById("playlistsSection");
+  const playlistList = document.getElementById("playlistList");
+  const createPlaylistBtn = document.getElementById("createPlaylistBtn");
+  
+  const playlistModal = document.getElementById("playlistModal");
+  const closePlaylistBtn = document.getElementById("closePlaylistBtn");
+  const playlistOptions = document.getElementById("playlistOptions");
+  const playlistSongTitle = document.getElementById("playlistSongTitle");
+  
+  const allSongsSection = document.getElementById("allSongsSection");
+  const playlistEditorSection = document.getElementById("playlistEditorSection");
+  const backToSongsBtn = document.getElementById("backToSongsBtn");
+  const editorPlaylistName = document.getElementById("editorPlaylistName");
+  const editorPlaylistMeta = document.getElementById("editorPlaylistMeta");
+  const editorSongList = document.getElementById("editorSongList");
+  
+  let songToAdd = null;
+  let currentViewPlaylist = null;
+
+  backToSongsBtn.addEventListener("click", () => {
+    currentViewPlaylist = null;
+    playlistEditorSection.style.display = "none";
+    allSongsSection.style.display = "block";
+    playlistsSection.style.display = "block";
+  });
+
+  function checkAuth() {
+    const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
+    if (token && userStr) {
+      const user = JSON.parse(userStr);
+      openAuthBtn.textContent = user.username;
+      playlistsSection.style.display = "block";
+      fetchPlaylists();
+    } else {
+      playlistsSection.style.display = "none";
+    }
+  }
+
+  async function fetchPlaylists() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    
+    try {
+      const res = await fetch("/api/playlists", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      userPlaylists = data.playlists || [];
+      renderPlaylists();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderPlaylists() {
+    if (!userPlaylists.length) {
+      playlistList.innerHTML = `<div class="empty-state"><p>You haven't created any playlists yet.</p></div>`;
+      return;
+    }
+    
+    playlistList.innerHTML = userPlaylists.map((pl, idx) => {
+      let coverHtml = `🎶`;
+      if (pl.songs.length > 0) {
+        const firstSong = pl.songs[0];
+        if (firstSong.artworkUrl) {
+          coverHtml = `<img src="${firstSong.artworkUrl}" alt="cover">`;
+        } else if (firstSong.youtubeId) {
+          coverHtml = `<img src="https://img.youtube.com/vi/${firstSong.youtubeId}/hqdefault.jpg" alt="cover">`;
+        }
+      }
+      return `
+        <div class="playlist-card" data-idx="${idx}">
+          <div class="playlist-cover">${coverHtml}</div>
+          <p class="playlist-title" title="${escapeHtml(pl.name)}">${escapeHtml(pl.name)}</p>
+          <p class="playlist-meta">${pl.songs.length} song(s)</p>
+        </div>
+      `;
+    }).join("");
+    
+    // Add click listeners to cards
+    playlistList.querySelectorAll(".playlist-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const pl = userPlaylists[card.dataset.idx];
+        renderPlaylistEditor(pl);
+      });
+    });
+  }
+
+  function renderPlaylistEditor(playlist) {
+    currentViewPlaylist = playlist;
+    allSongsSection.style.display = "none";
+    playlistsSection.style.display = "none";
+    playlistEditorSection.style.display = "block";
+    
+    editorPlaylistName.textContent = playlist.name;
+    editorPlaylistMeta.textContent = `${playlist.songs.length} song(s)`;
+    
+    if (playlist.songs.length === 0) {
+      editorSongList.innerHTML = `<div class="empty-state"><p>No songs in this playlist yet.</p></div>`;
+      return;
+    }
+    
+    editorSongList.innerHTML = playlist.songs.map((song, index) => {
+      const isPlaying = song.id === currentSearchId;
+      return `
+        <div class="song-row ${isPlaying ? "playing" : ""}" data-id="${escapeHtml(song.id)}" data-external="true">
+          <span class="s-idx">${isPlaying ? "▶" : index + 1}</span>
+          <span>
+            <p class="s-title">${escapeHtml(song.title)}</p>
+            <p class="s-meta">${escapeHtml(song.movie)} · ${escapeHtml(song.singer)}</p>
+          </span>
+          <span class="s-year">${song.year || ""}</span>
+          <span class="s-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg></span>
+          <button class="s-delete" title="Remove from Playlist">✕</button>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // --- Beautiful Playlist Name Dialog Modal ---
+  function openPlaylistNameDialog(title = "Create Playlist", subtitle = "Give your playlist a memorable name") {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("newPlaylistModal");
+      const form = document.getElementById("newPlaylistForm");
+      const input = document.getElementById("playlistNameInput");
+      const closeBtn = document.getElementById("closeNewPlaylistBtn");
+      const cancelBtn = document.getElementById("cancelNewPlaylistBtn");
+      const titleEl = document.getElementById("newPlaylistTitle");
+      const subtitleEl = document.getElementById("newPlaylistSubtitle");
+      const submitBtn = document.getElementById("savePlaylistBtn");
+
+      if (titleEl) titleEl.textContent = title;
+      if (subtitleEl) subtitleEl.textContent = subtitle;
+      if (submitBtn) submitBtn.textContent = "Create Playlist";
+
+      input.value = "";
+      modal.classList.add("active");
+      setTimeout(() => input.focus(), 60);
+
+      function cleanup() {
+        modal.classList.remove("active");
+        form.removeEventListener("submit", handleSubmit);
+        closeBtn.removeEventListener("click", handleCancel);
+        cancelBtn.removeEventListener("click", handleCancel);
+        modal.removeEventListener("click", handleBackdrop);
+        window.removeEventListener("keydown", handleKey);
+      }
+
+      function handleSubmit(e) {
+        e.preventDefault();
+        const val = input.value.trim();
+        cleanup();
+        resolve(val || null);
+      }
+
+      function handleCancel() {
+        cleanup();
+        resolve(null);
+      }
+
+      function handleBackdrop(e) {
+        if (e.target === modal) {
+          cleanup();
+          resolve(null);
+        }
+      }
+
+      function handleKey(e) {
+        if (e.key === "Escape") {
+          cleanup();
+          resolve(null);
+        }
+      }
+
+      form.addEventListener("submit", handleSubmit);
+      closeBtn.addEventListener("click", handleCancel);
+      cancelBtn.addEventListener("click", handleCancel);
+      modal.addEventListener("click", handleBackdrop);
+      window.addEventListener("keydown", handleKey);
+    });
+  }
+
+  createPlaylistBtn.addEventListener("click", async () => {
+    const name = await openPlaylistNameDialog("Create Playlist", "Give your playlist a memorable name");
+    if (!name) return;
+    
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("/api/playlists", {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        fetchPlaylists();
+        showToast(`Created "${name}"`);
+      } else {
+        showToast("Failed to create playlist");
+      }
+    } catch (err) {
+      showToast("Failed to create playlist");
+    }
+  });
+
+  function openPlaylistSelector(song) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showToast("Please login first to create or add playlists");
+      authModal.classList.add("active");
+      return;
+    }
+    songToAdd = song;
+    playlistSongTitle.textContent = `Adding: ${song.title}`;
+    
+    let optionsHtml = `
+      <button class="playlist-option-btn create-new-pl-btn" style="color: var(--accent1); font-weight: 600;">
+        + Create New Playlist
+      </button>
+    `;
+
+    if (userPlaylists.length > 0) {
+      optionsHtml += userPlaylists.map(pl => `
+        <button class="playlist-option-btn" data-plid="${pl._id}" data-plname="${escapeHtml(pl.name)}">
+          ${escapeHtml(pl.name)} (${pl.songs.length} songs)
+        </button>
+      `).join("");
+    }
+    
+    playlistOptions.innerHTML = optionsHtml;
+    playlistModal.classList.add("active");
+  }
+
+  closePlaylistBtn.addEventListener("click", () => {
+    playlistModal.classList.remove("active");
+  });
+
+  playlistModal.addEventListener("click", async (e) => {
+    if (e.target === playlistModal) {
+      playlistModal.classList.remove("active");
+      return;
+    }
+    
+    // Create new playlist directly from modal
+    const createBtn = e.target.closest(".create-new-pl-btn");
+    if (createBtn) {
+      playlistModal.classList.remove("active");
+      const songName = songToAdd ? songToAdd.title : "this song";
+      const name = await openPlaylistNameDialog("Create & Add Song", `Name your playlist for "${songName}"`);
+      if (!name) {
+        playlistModal.classList.add("active");
+        return;
+      }
+      
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch("/api/playlists", {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Add song immediately to the newly created playlist
+          const addRes = await fetch(`/api/playlists/${data.playlist._id}/songs`, {
+            method: "POST",
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ song: songToAdd })
+          });
+          if (addRes.ok) {
+            fetchPlaylists();
+            showToast(`Added to ${name}`);
+          }
+        } else {
+          showToast("Failed to create playlist");
+        }
+      } catch (err) {
+        showToast("Failed to create playlist");
+      }
+      return;
+    }
+
+    // Add song to existing playlist
+    const btn = e.target.closest(".playlist-option-btn");
+    if (btn && songToAdd) {
+      const plId = btn.dataset.plid;
+      const plName = btn.dataset.plname;
+      const token = localStorage.getItem("token");
+      btn.textContent = "Adding...";
+      try {
+        const res = await fetch(`/api/playlists/${plId}/songs`, {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ song: songToAdd })
+        });
+        if (res.ok) {
+          playlistModal.classList.remove("active");
+          fetchPlaylists(); // refresh counts
+          showToast(`Added to ${plName}`);
+        } else {
+          showToast("Failed to add song");
+        }
+      } catch (err) {
+        showToast("Error adding song");
+      }
+    }
+  });
+
+  // Check auth on load
+  checkAuth();
 })();

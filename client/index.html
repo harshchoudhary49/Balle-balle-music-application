@@ -68,7 +68,17 @@
       </div>
     </section>
 
-    <section class="list-section">
+    <section class="list-section" id="playlistsSection" style="display:none; margin-bottom: 40px;">
+      <div class="list-head">
+        <h2>My Playlists</h2>
+        <button class="auth-btn" id="createPlaylistBtn">+ New Playlist</button>
+      </div>
+      <div class="song-list" id="playlistList">
+        <div class="empty-state"><p>You haven't created any playlists yet.</p></div>
+      </div>
+    </section>
+
+    <section class="list-section" id="allSongsSection">
       <div class="list-head">
         <h2>All songs on this station</h2>
         <div class="searchbox">
@@ -78,6 +88,19 @@
       </div>
       <div class="song-list" id="songList">
         <div class="empty-state"><p>Loading songs…</p></div>
+      </div>
+    </section>
+
+    <section class="list-section" id="playlistEditorSection" style="display:none;">
+      <div class="list-head" style="align-items: flex-end;">
+        <div>
+          <button class="auth-btn" id="backToSongsBtn" style="margin-bottom: 12px; font-size: 11px;">&larr; Back to Songs</button>
+          <h2 id="editorPlaylistName">My Playlist</h2>
+        </div>
+        <div style="font-size: 13px; color: var(--muted);" id="editorPlaylistMeta">0 songs</div>
+      </div>
+      <div class="song-list" id="editorSongList">
+        <div class="empty-state"><p>No songs in this playlist yet.</p></div>
       </div>
     </section>
   </main>
@@ -117,9 +140,60 @@
   </div>
 </div>
 
+<!-- Playlist Selector Modal -->
+<div class="modal-overlay" id="playlistModal">
+  <div class="modal-content">
+    <button class="modal-close" id="closePlaylistBtn">&times;</button>
+    <div class="modal-header">
+      <h2>Add to Playlist</h2>
+      <p id="playlistSongTitle">Select a playlist for this song</p>
+    </div>
+    <div class="playlist-options" id="playlistOptions">
+      <div class="empty-state"><p>Loading playlists...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Beautiful Create Playlist Modal -->
+<div class="modal-overlay" id="newPlaylistModal">
+  <div class="modal-content">
+    <button class="modal-close" id="closeNewPlaylistBtn">&times;</button>
+    <div class="modal-header">
+      <div class="modal-icon-badge">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+      </div>
+      <h2 id="newPlaylistTitle">Create Playlist</h2>
+      <p id="newPlaylistSubtitle">Give your playlist a memorable name</p>
+    </div>
+    <form id="newPlaylistForm" class="auth-form">
+      <div class="input-group">
+        <label for="playlistNameInput">Playlist Name</label>
+        <input 
+          type="text" 
+          id="playlistNameInput" 
+          placeholder="e.g. Late Night Melodies, Road Trip..." 
+          required 
+          autocomplete="off" 
+          maxlength="50"
+        />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="cancelNewPlaylistBtn">Cancel</button>
+        <button type="submit" class="submit-btn" id="savePlaylistBtn">Create Playlist</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- hidden YouTube player -->
 <div id="ytplayer" style="position:fixed;left:-10000px;top:-10000px;width:320px;height:180px;overflow:hidden;pointer-events:none;"></div>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script src="script.js"></script>
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+
 </body>
 </html>
